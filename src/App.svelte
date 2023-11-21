@@ -5,7 +5,7 @@ import * as K from 'konva';
 // hackery: the canvas/stage element is abs positioned so that as you resize the window, the right pane doesn't shift offscreen.
 // to make this work, we have an in-DOM element (called stagePlaceholder) that the browser resizes as needed, and then anytime
 // a resize happens, we resize the konva.Stage object which resizes the actual canvas element.
-let stage, stagePlaceholderEl;
+let stage, stagePlaceholderEl, gridLayer;
 onMount(() =>
 {
     stage = new K.Stage({
@@ -15,8 +15,11 @@ onMount(() =>
         height: stagePlaceholderEl.offsetHeight
     });
     stage.on('wheel', OnMouseWheel);
+    stage.on('contextmenu', OnRightClick);
 
-    // then create layer
+    gridLayer = new K.Layer()
+    stage.add(gridLayer);
+
     var layer = new K.Layer();
 
     // create our shape
@@ -34,10 +37,29 @@ onMount(() =>
 
     // add the layer to the stage
     stage.add(layer);
-
-// draw the image
-//layer.draw();
+    DrawGrid(50, 40);
 });
+
+function DrawGrid(numX, numY)
+{
+    const TILE_SIZE = 50;
+    let strokeParams = {stroke:'black', strokeWidth:2};
+    let w = TILE_SIZE*numX;
+    let h = TILE_SIZE*numY;
+    gridLayer.destroyChildren();
+    gridLayer.add(new K.Rect({x:0, y:0, width:w, height:h, ...strokeParams}));
+    for (let i=1; i < numX; i++)
+    {
+        let x = TILE_SIZE*i;
+        gridLayer.add(new K.Line({points:[x, 0, x, h], ...strokeParams}));
+    }
+
+    for (let i=1; i < numY; i++)
+    {
+        let y = TILE_SIZE*i;
+        gridLayer.add(new K.Line({points:[0, y, w, y], ...strokeParams}));
+    }
+}
 
 // scale the stage relative to where the cursor is
 // from https://konvajs.org/docs/sandbox/Zooming_Relative_To_Pointer.html
@@ -62,6 +84,13 @@ function OnMouseWheel(e)
 
     let newPos = {x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale};
     stage.position(newPos);
+}
+
+// starts the drag-by-right-button process
+function OnRightClick(e)
+{
+    e.evt.preventDefault();
+    console.log('EEE:', e)
 }
 
 async function OnWindowResize()
@@ -111,7 +140,7 @@ screen {
 
         stagePlaceholder {
             display: block;
-            background-color:yellow;
+            background-color:#ccc;
             flex-grow:1;
             position:relative;
         }

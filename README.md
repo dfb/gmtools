@@ -19,7 +19,6 @@ POC milestone #1
 - draw grid
 
 NEXT
-- left side is a painted grid
 - left side is right-click pannable
 
 later POC milestones
