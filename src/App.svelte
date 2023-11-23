@@ -10,12 +10,12 @@ onMount(() =>
 {
     stage = new K.Stage({
         container: 'actualStageHolder',
-        draggable:true,
+        draggable:false,
         width: stagePlaceholderEl.offsetWidth,
         height: stagePlaceholderEl.offsetHeight
     });
     stage.on('wheel', OnMouseWheel);
-    stage.on('contextmenu', OnRightClick);
+    stage.on('contextmenu', e => e.evt.preventDefault()); // don't show right-click menu
 
     gridLayer = new K.Layer()
     stage.add(gridLayer);
@@ -87,10 +87,32 @@ function OnMouseWheel(e)
 }
 
 // starts the drag-by-right-button process
-function OnRightClick(e)
+let panStartOffset=null;
+function OnMouseDown(e)
 {
-    e.evt.preventDefault();
-    console.log('EEE:', e)
+    if (e.button == 2) // right click
+    {
+        e.preventDefault();
+        panStartOffset = [stage.x()-e.clientX, stage.y()-e.clientY];
+    }
+}
+
+function OnMouseMove(e)
+{
+    if (panStartOffset != null) // right button up
+    {
+        e.preventDefault();
+        stage.position({x:e.clientX+panStartOffset[0], y:e.clientY+panStartOffset[1]});
+    }
+}
+
+function OnMouseUp(e)
+{
+    if (e.button == 2 && panStartOffset != null) // right button up
+    {
+        e.preventDefault();
+        panStartOffset = null;
+    }
 }
 
 async function OnWindowResize()
@@ -106,10 +128,10 @@ async function OnWindowResize()
     <stagePlaceholder bind:this={stagePlaceholderEl} />
         <infoPane>
             <boardInfo>
-                board info
+                board info/tools
             </boardInfo>
             <tileInfo>
-                tile info
+                tile info/tools
             </tileInfo>
             <appButtons>
                 app buttons go here
@@ -120,7 +142,7 @@ async function OnWindowResize()
         message area
     </messageArea>
 </screen>
-<div id="actualStageHolder"/>
+<div id="actualStageHolder" on:mousedown={OnMouseDown} on:mousemove={OnMouseMove} on:mouseup={OnMouseUp}/>
 
 <style>
 screen {
@@ -188,37 +210,3 @@ screen {
     }
 </style>
 
-<!--
-<Stage config={{ width, height }}>
-    <Layer>
-        {#each list as item (item.id)}
-            <Star
-                config={{
-                    x: item.x,
-                    y: item.y,
-                    rotation: item.rotation,
-                    id: item.id,
-                    numPoints: 5,
-                    innerRadius: 30,
-                    outerRadius: 50,
-                    fill: "#89b717",
-                    opacity: 0.8,
-                    draggable: true,
-                    scaleX:
-                        dragItemId === item.id ? item.scale * 1.2 : item.scale,
-                    scaleY:
-                        dragItemId === item.id ? item.scale * 1.2 : item.scale,
-                    shadowColor: "black",
-                    shadowBlur: 10,
-                    shadowOffsetX: dragItemId === item.id ? 15 : 5,
-                    shadowOffsetY: dragItemId === item.id ? 15 : 5,
-                    shadowOpacity: 0.6,
-                }}
-                bind:handle={item.handle}
-                on:dragstart={handleDragStart}
-                on:dragend={handleDragEnd}
-            />
-        {/each}
-    </Layer>
-</Stage>
--->
