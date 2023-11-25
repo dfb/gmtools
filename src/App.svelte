@@ -2,21 +2,21 @@
 import { onMount } from 'svelte';
 import * as K from 'konva';
 
-const GRID_W = 50; // number of tiles in X and Y. TODO: this will become configurable
-const GRID_H = 40;
+const GRID_W = 20; // number of tiles in X and Y. TODO: this will become configurable
+const GRID_H = 15;
 const TILE_SIZE = 64; // size of tiles in pixels in both X and Y directions
 
-let curPaintTool = null; // one of the names of the paintTools, i.e. which one is currently selected
-let paintToolRows = [ // list of rows of objects describing different tools you can paint with. name must be unique.
+let paintToolRows = [ // list of rows of objects describing different tools you can paint with. id must be unique.
     [
-        {name:'ttGrass', propName:'type', propValue:'ttGrass'}
+        {id:'tGrass', propName:'type', propValue:'ttGrass'}
     ],
     [
-        {name:'lNormal', propName:'light', propValue:'#00000000'},
-        {name:'lDim', propName:'light', propValue:'#00000050'},
-        {name:'lDark', propName:'light', propValue:'#00000090'}
+        {id:'lNormal', propName:'light', propValue:'#00000000'},
+        {id:'lDim', propName:'light', propValue:'#00000050'},
+        {id:'lDark', propName:'light', propValue:'#00000090'}
     ],
 ]
+let curPaintTool = paintToolRows[0][0]; // one of the paintTools, i.e. which one is currently selected
 
 // hackery: the canvas/stage element is abs positioned so that as you resize the window, the right pane doesn't shift offscreen.
 // to make this work, we have an in-DOM element (called stagePlaceholder) that the browser resizes as needed, and then anytime
@@ -226,7 +226,9 @@ function SelectPaintTool(tool)
                 {#each paintToolRows as row}
                     <p>
                     {#each row as tool}
-                        <button on:click={()=>SelectPaintTool(tool)}>{tool.name}</button>
+                        <paintTool class:selected={curPaintTool && curPaintTool.id == tool.id}>
+                            <button on:click={()=>SelectPaintTool(tool)}>{tool.id}</button>
+                        </paintTool>
                     {/each}
                     </p>
                 {/each}
@@ -309,5 +311,13 @@ screen {
     #actualStageHolder {
         position:absolute;
     }
+
+paintTool {
+    display:inline-block;
+}
+
+paintTool.selected {
+    border:solid blue 2px;
+}
 </style>
 
