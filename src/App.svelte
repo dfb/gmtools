@@ -171,6 +171,14 @@ function DrawGrid()
         let y = TILE_SIZE*i;
         gridLayer.add(new K.Line({points:[0, y, w, y], ...strokeParams}));
     }
+
+    if (curTilePos != null)
+    {   // show one tile as selected
+        let [x,y] = curTilePos;
+        x *= TILE_SIZE;
+        y *= TILE_SIZE;
+        gridLayer.add(new K.Rect({x, y, width:TILE_SIZE, height:TILE_SIZE, stroke:'white', strokeWidth:2}));
+    }
 }
 
 // scale the stage relative to where the cursor is
@@ -200,6 +208,9 @@ function OnMouseWheel(e)
 
 let panStartOffset=null; // for moving around the view of the board
 let paintingTiles = false;
+let curTilePos = null; // [tileX, tileY] of currently selected tile or null
+$:curTile = curTilePos != null ? tiles[curTilePos[0]][curTilePos[1]] : null;
+
 function OnMouseDown(e)
 {
     if (e.button == 0)
@@ -217,6 +228,7 @@ function OnMouseDown(e)
                 curTilePos = null;
             else
                 curTilePos = [x,y];
+            DrawGrid();
         }
     }
     else if (e.button == 2) // right click
@@ -294,14 +306,6 @@ async function OnWindowResize()
 function SelectPaintTool(tool)
 {
     curPaintTool = tool;
-}
-
-// makes the given tile be selected
-let curTilePos = null; // [tileX, tileY] of currently selected tile or null
-$:curTile = curTilePos != null ? tiles[curTilePos[0]][curTilePos[1]] : null;
-function SelectTile(x, y)
-{
-    curTilePos = [x,y];
 }
 
 </script>
