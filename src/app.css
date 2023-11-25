@@ -1,3 +1,6 @@
+strong { font-weight: 500;}
+.bold { font-weight: 500; }
+
 body {
     display:flex;
     flex-direction:column;
@@ -6,4 +9,49 @@ body {
     align-items: stretch;
     height: 100vh;
 }
+
+body, input {
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+modal h1 {
+    margin: -15px -30px 15px -30px;
+    padding: 0 15px;
+    background-image: linear-gradient(83deg, rgba(39,2,118,1) 0%, rgba(55,3,167,1) 100%);
+    height: 45px;
+    line-height: 45px;
+    color: #fff;
+    font-size: 22px;
+    font-weight: normal;
+    display: block;
+    position: relative;
+}
+
+modal content {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    flex-shrink: 1;
+    overflow-x: hidden;
+    overflow-y: auto;
+    display: block;
+    padding: 0px 27px;
+    margin: -10px -24px 0px -30px;
+}
+
+modal p {
+    padding: 0;
+    margin: 15px 0;
+}
+
+modal .buttons {
+    display: flex;
+    flex-direction: row;
+    flex-shrink: 0;
+    flex-grow: 0;
+}
+
+    modal .buttons button {
+        margin-left: 0;
+    }
 

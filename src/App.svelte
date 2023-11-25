@@ -1,6 +1,37 @@
 <script>
 import { onMount } from 'svelte';
 import * as K from 'konva';
+import * as Modal from './modal.svelte';
+import ModalChoose from './modal_choose.svelte';
+
+// returns a promise that resolves to the index of the button that was clicked. Adds a Cancel button to the list
+// of buttons by default; clicking it or hitting Escape or clicking the overlay makes the promise resolve to -1.
+window.ChooseModal = function(body, title, nonCancelButtonLabels, addCancelButton=true)
+{
+    return new Promise((resolve, reject) =>
+    {
+        OpenModal(ModalChoose, {title, body, nonCancelButtonLabels, addCancelButton}).then(({closeCode, comp}) => resolve(comp.choseIndex));
+    });
+}
+
+// gets the user to confirm an action. Returns a promise that is resolved *only* if the user clicks the ok button
+window.ConfirmModal = function(body, title='Proceed?', okLabel='Ok')
+{
+    return new Promise((resolve, reject) =>
+    {
+        OpenModal(ModalChoose, {title, body, nonCancelButtonLabels:[okLabel]}).then(({closeCode, comp}) =>
+        {
+            if (comp.choseIndex == 0) // the ok button
+                resolve();
+        });
+    });
+}
+
+// simple way to show the user an alert
+window.AlertModal = function(body, title=' ')
+{
+    return ChooseModal(body, title, ['Ok'], false);
+}
 
 const GRID_W = 20; // number of tiles in X and Y. TODO: this will become configurable
 const GRID_H = 15;
@@ -28,9 +59,10 @@ let curPaintTool = paintToolRows[0][0]; // one of the paintTools, i.e. which one
 // hackery: the canvas/stage element is abs positioned so that as you resize the window, the right pane doesn't shift offscreen.
 // to make this work, we have an in-DOM element (called stagePlaceholder) that the browser resizes as needed, and then anytime
 // a resize happens, we resize the konva.Stage object which resizes the actual canvas element.
-let stage, stagePlaceholderEl, gridLayer, tileTypeLayer, tileLightLayer, tileMovementLayer;
+let modalHolder, stage, stagePlaceholderEl, gridLayer, tileTypeLayer, tileLightLayer, tileMovementLayer;
 onMount(() =>
 {
+    Modal.Init(modalHolder);
     LoadImages();
     stage = new K.Stage({
         container: 'actualStageHolder',
@@ -233,10 +265,9 @@ function SelectPaintTool(tool)
 <svelte:window on:resize={OnWindowResize}/>
 <screen>
     <clientArea>
-    <stagePlaceholder bind:this={stagePlaceholderEl} />
+        <stagePlaceholder bind:this={stagePlaceholderEl} />
         <infoPane>
             <boardInfo>
-                board info/tools
                 {#each paintToolRows as row}
                     <p>
                     {#each row as tool}
@@ -259,7 +290,9 @@ function SelectPaintTool(tool)
         message area
     </messageArea>
 </screen>
+
 <div id="actualStageHolder" on:mousedown={OnMouseDown} on:mousemove={OnMouseMove} on:mouseup={OnMouseUp}/>
+<modalholder bind:this={modalHolder} /> <!-- keep this near the end so it's on top -->
 
 <style>
 screen {
