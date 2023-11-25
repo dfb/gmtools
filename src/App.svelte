@@ -8,7 +8,14 @@ const TILE_SIZE = 64; // size of tiles in pixels in both X and Y directions
 
 let paintToolRows = [ // list of rows of objects describing different tools you can paint with. id must be unique.
     [
-        {id:'tGrass', propName:'type', propValue:'ttGrass'}
+        {id:'tGrass', propName:'type', propValue:'ttGrass'},
+        {id: 'tWater', propName:'type', propValue:'ttWater'},
+        {id: 'tForest', propName:'type', propValue:'ttForest'},
+        {id: 'tLava', propName:'type', propValue:'ttLava'},
+        {id: 'tMtn', propName:'type', propValue:'ttMtn'},
+        {id: 'tField', propName:'type', propValue:'ttField'},
+        {id: 'tCastle', propName:'type', propValue:'ttCastle'},
+        {id: 'tSand', propName:'type', propValue:'ttSand'},
     ],
     [
         {id:'lNormal', propName:'light', propValue:'#00000000'},
@@ -82,6 +89,13 @@ function SetupGrid()
 // called on startup to create Image objects for any assets we'll reuse
 let imageCache = { // name -> obj w/ attrs .url, .image (Image object)
     ttGrass:{url:'/images/tile_grass.png'},
+    ttWater:{url:'/images/tile_water.jpg'},
+    ttForest:{url:'/images/tile_forest.jpg'},
+    ttLava:{url:'/images/tile_lava.jpg'},
+    ttMtn:{url:'/images/tile_mtn.jpg'},
+    ttField:{url:'/images/tile_field.jpg'},
+    ttCastle:{url:'/images/tile_castle.jpg'},
+    ttSand:{url:'/images/tile_sand.jpg'},
 }; // name -> obj w/ attrs .url, .image (Image object), .loaded (t|f)
 function LoadImages()
 {
