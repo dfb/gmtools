@@ -2,12 +2,29 @@
 import { onMount } from 'svelte';
 import * as K from 'konva';
 
+const GRID_W = 50; // number of tiles in X and Y. TODO: this will become configurable
+const GRID_H = 40;
+const TILE_SIZE = 64; // size of tiles in pixels in both X and Y directions
+
+let curPaintTool = null; // one of the names of the paintTools, i.e. which one is currently selected
+let paintToolRows = [ // list of rows of objects describing different tools you can paint with. name must be unique.
+    [
+        {name:'ttGrass', propName:'type', propValue:'ttGrass'}
+    ],
+    [
+        {name:'lNormal', propName:'light', propValue:'#00000000'},
+        {name:'lDim', propName:'light', propValue:'#00000050'},
+        {name:'lDark', propName:'light', propValue:'#00000090'}
+    ],
+]
+
 // hackery: the canvas/stage element is abs positioned so that as you resize the window, the right pane doesn't shift offscreen.
 // to make this work, we have an in-DOM element (called stagePlaceholder) that the browser resizes as needed, and then anytime
 // a resize happens, we resize the konva.Stage object which resizes the actual canvas element.
-let stage, stagePlaceholderEl, gridLayer;
+let stage, stagePlaceholderEl, gridLayer, tileTypeLayer, tileLightLayer, tileMovementLayer;
 onMount(() =>
 {
+    LoadImages();
     stage = new K.Stage({
         container: 'actualStageHolder',
         draggable:false,
@@ -17,44 +34,81 @@ onMount(() =>
     stage.on('wheel', OnMouseWheel);
     stage.on('contextmenu', e => e.evt.preventDefault()); // don't show right-click menu
 
+    // the tile type layer holds a konva Image instance for each grid square (tile) showing the ground type
+    tileTypeLayer = new K.Layer();
+    stage.add(tileTypeLayer);
+
+    // the tile light layer holds a konva Rect for each tile to show normal vs dim vs dark lighting
+    tileLightLayer = new K.Layer();
+    stage.add(tileLightLayer);
+
+    // the grid layer just holds lines that draw the visible grid
     gridLayer = new K.Layer()
     stage.add(gridLayer);
+    DrawGrid();
 
-    var layer = new K.Layer();
-
-    // create our shape
-    var circle = new K.Circle({
-      x: stage.width() / 2,
-      y: stage.height() / 2,
-      radius: 70,
-      fill: 'red',
-      stroke: 'black',
-      strokeWidth: 4
-    });
-
-    // add the shape to the layer
-    layer.add(circle);
-
-    // add the layer to the stage
-    stage.add(layer);
-    DrawGrid(50, 40);
+    SetupGrid();
 });
 
-function DrawGrid(numX, numY)
+// sets up the global grid to be a 2D array of objects with info and images for each tile on the grid
+let tiles;
+function SetupGrid()
 {
-    const TILE_SIZE = 50;
+    tiles = [];
+    for (let x=0; x < GRID_W; x++) // we'll make it like the screen, X coord indexes into a column of entries
+    {
+        let col = [];
+        for (let y=0; y < GRID_H; y++)
+        {
+            let entry = {};
+            col.push(entry);
+
+            // do any per-tile initialization here
+            entry.x = x;
+            entry.y = y;
+            entry.px = x*TILE_SIZE; // px,py = pixel coordinates of top-left of this tile
+            entry.py = y*TILE_SIZE;
+
+            entry.typeImage = new K.Image({x:entry.px, y:entry.py});
+            tileTypeLayer.add(entry.typeImage);
+
+            entry.lightRect = new K.Rect({x:entry.px, y:entry.py, width:TILE_SIZE, height:TILE_SIZE});
+            tileLightLayer.add(entry.lightRect);
+        }
+        tiles.push(col);
+    }
+}
+
+// called on startup to create Image objects for any assets we'll reuse
+let imageCache = { // name -> obj w/ attrs .url, .image (Image object)
+    ttGrass:{url:'/images/tile_grass.png'},
+}; // name -> obj w/ attrs .url, .image (Image object), .loaded (t|f)
+function LoadImages()
+{
+    for (let [k,entry] of Object.entries(imageCache))
+    {
+        entry.loaded = false;
+        entry.image = new Image();
+        entry.image.onload = () => entry.loaded = true;
+        entry.image.src = entry.url;
+    }
+}
+
+// clears and redraws the grid lines
+function DrawGrid()
+{
     let strokeParams = {stroke:'black', strokeWidth:2};
-    let w = TILE_SIZE*numX;
-    let h = TILE_SIZE*numY;
+    let w = TILE_SIZE*GRID_W;
+    let h = TILE_SIZE*GRID_H;
     gridLayer.destroyChildren();
     gridLayer.add(new K.Rect({x:0, y:0, width:w, height:h, ...strokeParams}));
-    for (let i=1; i < numX; i++)
+    for (let i=1; i < GRID_W; i++)
     {
         let x = TILE_SIZE*i;
         gridLayer.add(new K.Line({points:[x, 0, x, h], ...strokeParams}));
     }
 
-    for (let i=1; i < numY; i++)
+    for (let i=1; i < GRID_H; i++)
     {
         let y = TILE_SIZE*i;
         gridLayer.add(new K.Line({points:[0, y, w, y], ...strokeParams}));
@@ -86,11 +140,17 @@ function OnMouseWheel(e)
     stage.position(newPos);
 }
 
-// starts the drag-by-right-button process
-let panStartOffset=null;
+let panStartOffset=null; // for moving around the view of the board
+let paintingTiles = false;
 function OnMouseDown(e)
 {
-    if (e.button == 2) // right click
+    if (e.button == 0)
+    {
+        paintingTiles = true;
+        PaintTile();
+        e.preventDefault();
+    }
+    else if (e.button == 2) // right click
     {
         e.preventDefault();
         panStartOffset = [stage.x()-e.clientX, stage.y()-e.clientY];
@@ -99,6 +159,12 @@ function OnMouseDown(e)
 
 function OnMouseMove(e)
 {
+    if (paintingTiles)
+    {
+        e.preventDefault();
+        PaintTile();
+    }
+
     if (panStartOffset != null) // right button up
     {
         e.preventDefault();
@@ -108,16 +174,44 @@ function OnMouseMove(e)
 
 function OnMouseUp(e)
 {
-    if (e.button == 2 && panStartOffset != null) // right button up
+    if (e.button == 0 && paintingTiles)
+    {
+        e.preventDefault();
+        paintingTiles = false;
+    }
+    else if (e.button == 2 && panStartOffset != null) // right button up
     {
         e.preventDefault();
         panStartOffset = null;
     }
 }
 
+// called by mouse down/move when painting tiles - figures out which tile the mouse is over,
+// updates its properties in the board, and updates the canvas to show the updated tile
+function PaintTile()
+{
+    if (!curPaintTool) return;
+    let {x, y} = stage.getRelativePointerPosition();
+    x = Math.trunc(x / TILE_SIZE);
+    y = Math.trunc(y / TILE_SIZE);
+    if (x < 0 || y < 0 || x > GRID_W-1 || y > GRID_H-1) return; // outside of the grid
+    let entry = tiles[x][y];
+
+    let tool = curPaintTool;
+    if (tool.propName == 'type')
+        entry.typeImage.image(imageCache[tool.propValue].image);
+    else if (tool.propName == 'light')
+        entry.lightRect.fill(tool.propValue);
+}
+
 async function OnWindowResize()
 {
     stage.size({width:stagePlaceholderEl.offsetWidth, height:stagePlaceholderEl.offsetHeight});
+}
+
+function SelectPaintTool(tool)
+{
+    curPaintTool = tool;
 }
 
 </script>
@@ -129,6 +223,13 @@ async function OnWindowResize()
         <infoPane>
             <boardInfo>
                 board info/tools
+                {#each paintToolRows as row}
+                    <p>
+                    {#each row as tool}
+                        <button on:click={()=>SelectPaintTool(tool)}>{tool.name}</button>
+                    {/each}
+                    </p>
+                {/each}
             </boardInfo>
             <tileInfo>
                 tile info/tools
