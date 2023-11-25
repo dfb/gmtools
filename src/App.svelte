@@ -37,24 +37,35 @@ const GRID_W = 20; // number of tiles in X and Y. TODO: this will become configu
 const GRID_H = 15;
 const TILE_SIZE = 64; // size of tiles in pixels in both X and Y directions
 
-let paintToolRows = [ // list of rows of objects describing different tools you can paint with. id must be unique.
-    [
-        {id:'tGrass', propName:'type', propValue:'ttGrass'},
-        {id: 'tWater', propName:'type', propValue:'ttWater'},
-        {id: 'tForest', propName:'type', propValue:'ttForest'},
-        {id: 'tLava', propName:'type', propValue:'ttLava'},
-        {id: 'tMtn', propName:'type', propValue:'ttMtn'},
-        {id: 'tField', propName:'type', propValue:'ttField'},
-        {id: 'tCastle', propName:'type', propValue:'ttCastle'},
-        {id: 'tSand', propName:'type', propValue:'ttSand'},
-    ],
-    [
-        {id:'lNormal', propName:'light', propValue:'#00000000'},
-        {id:'lDim', propName:'light', propValue:'#00000050'},
-        {id:'lDark', propName:'light', propValue:'#00000090'}
-    ],
-]
-let curPaintTool = paintToolRows[0][0]; // one of the paintTools, i.e. which one is currently selected
+let paintToolGroups = [ // list of rows of objects describing different tools you can paint with. id must be unique.
+    {
+        label:'Type:',
+        tools:[
+            {id:'tGrass', propName:'type', propValue:'ttGrass'},
+            {id: 'tWater', propName:'type', propValue:'ttWater'},
+            {id: 'tForest', propName:'type', propValue:'ttForest'},
+            {id: 'tLava', propName:'type', propValue:'ttLava'},
+            {id: 'tMtn', propName:'type', propValue:'ttMtn'},
+            {id: 'tField', propName:'type', propValue:'ttField'},
+            {id: 'tCastle', propName:'type', propValue:'ttCastle'},
+            {id: 'tSand', propName:'type', propValue:'ttSand'},
+        ]
+    },
+    {
+        label:'Lighting:',
+        tools:[
+            {id:'lNormal', propName:'light', propValue:'#00000000'},
+            {id:'lDim', propName:'light', propValue:'#00000050'},
+            {id:'lDark', propName:'light', propValue:'#00000090'}
+        ]
+    },
+    {
+        label:'Movement:',
+        tools:[
+        ]
+    }
+];
+let curPaintTool = paintToolGroups[0].tools[0]; // one of the paintTools, i.e. which one is currently selected
 
 // hackery: the canvas/stage element is abs positioned so that as you resize the window, the right pane doesn't shift offscreen.
 // to make this work, we have an in-DOM element (called stagePlaceholder) that the browser resizes as needed, and then anytime
@@ -108,6 +119,7 @@ function SetupGrid()
             entry.px = x*TILE_SIZE; // px,py = pixel coordinates of top-left of this tile
             entry.py = y*TILE_SIZE;
 
+            entry.type = 'empty';
             entry.typeImage = new K.Image({x:entry.px, y:entry.py});
             tileTypeLayer.add(entry.typeImage);
 
@@ -192,9 +204,20 @@ function OnMouseDown(e)
 {
     if (e.button == 0)
     {
-        paintingTiles = true;
-        PaintTile();
-        e.preventDefault();
+        if (e.shiftKey)
+        {   // begin painting tile properties
+            paintingTiles = true;
+            PaintTile();
+            e.preventDefault();
+        }
+        else
+        {   // select this tile
+            let [x,y] = TilePosUnderCursor();
+            if (x == -1)
+                curTilePos = null;
+            else
+                curTilePos = [x,y];
+        }
     }
     else if (e.button == 2) // right click
     {
@@ -207,11 +230,13 @@ function OnMouseMove(e)
 {
     if (paintingTiles)
     {
-        e.preventDefault();
-        PaintTile();
+        if (e.shiftKey)
+        {
+            e.preventDefault();
+            PaintTile();
+        }
     }
-
-    if (panStartOffset != null) // right button up
+    else if (panStartOffset != null) // right button up
     {
         e.preventDefault();
         stage.position({x:e.clientX+panStartOffset[0], y:e.clientY+panStartOffset[1]});
@@ -232,20 +257,31 @@ function OnMouseUp(e)
     }
 }
 
+// returns the [x,y] of the tile under the cursor or [-1,-1] if the cursor is outside the grid
+function TilePosUnderCursor()
+{
+    let {x, y} = stage.getRelativePointerPosition();
+    x = Math.trunc(x / TILE_SIZE);
+    y = Math.trunc(y / TILE_SIZE);
+    if (x < 0 || y < 0 || x > GRID_W-1 || y > GRID_H-1) return [-1,-1]; // outside of the grid
+    return [x,y];
+}
+
 // called by mouse down/move when painting tiles - figures out which tile the mouse is over,
 // updates its properties in the board, and updates the canvas to show the updated tile
 function PaintTile()
 {
     if (!curPaintTool) return;
-    let {x, y} = stage.getRelativePointerPosition();
-    x = Math.trunc(x / TILE_SIZE);
-    y = Math.trunc(y / TILE_SIZE);
-    if (x < 0 || y < 0 || x > GRID_W-1 || y > GRID_H-1) return; // outside of the grid
+    let [x,y] = TilePosUnderCursor();
+    if (x == -1) return; // outside the grid
     let entry = tiles[x][y];
 
     let tool = curPaintTool;
     if (tool.propName == 'type')
+    {
+        entry.type = tool.propValue;
         entry.typeImage.image(imageCache[tool.propValue].image);
+    }
     else if (tool.propName == 'light')
         entry.lightRect.fill(tool.propValue);
 }
@@ -260,6 +296,14 @@ function SelectPaintTool(tool)
     curPaintTool = tool;
 }
 
+// makes the given tile be selected
+let curTilePos = null; // [tileX, tileY] of currently selected tile or null
+$:curTile = curTilePos != null ? tiles[curTilePos[0]][curTilePos[1]] : null;
+function SelectTile(x, y)
+{
+    curTilePos = [x,y];
+}
+
 </script>
 
 <svelte:window on:resize={OnWindowResize}/>
@@ -268,18 +312,23 @@ function SelectPaintTool(tool)
         <stagePlaceholder bind:this={stagePlaceholderEl} />
         <infoPane>
             <boardInfo>
-                {#each paintToolRows as row}
-                    <p>
-                    {#each row as tool}
-                        <paintTool class:selected={curPaintTool && curPaintTool.id == tool.id}>
-                            <button on:click={()=>SelectPaintTool(tool)}>{tool.id}</button>
-                        </paintTool>
-                    {/each}
-                    </p>
+                {#each paintToolGroups as group}
+                    <toolGroup>
+                        <groupTitle>{group.label}</groupTitle>
+                        {#each group.tools as tool}
+                            <paintTool class:selected={curPaintTool && curPaintTool.id == tool.id}>
+                                <button on:click={()=>SelectPaintTool(tool)}>{tool.id}</button>
+                            </paintTool>
+                        {/each}
+                    </toolGroup>
                 {/each}
+                Note: hold shift while dragging with the left mouse button to "paint" using any of the above tools.
             </boardInfo>
             <tileInfo>
-                tile info/tools
+                {#if curTilePos}
+                    <p>Tile: {curTilePos[0]}, {curTilePos[1]}</p>
+                    <p>Type: {curTile.type}</p>
+                {/if}
             </tileInfo>
             <appButtons>
                 app buttons go here
@@ -331,6 +380,16 @@ screen {
                 padding:5px;
                 flex-basis:100px;
             }
+
+                boardInfo toolGroup {
+                    display:block;
+                    margin-bottom:5px;
+                }
+
+                boardInfo toolGroup groupTitle {
+                    display:block;
+                    font-size:0.8em;
+                }
 
             tileInfo {
                 display:block;
