@@ -1,8 +1,10 @@
 <script>
 import { onMount } from 'svelte';
 import * as K from 'konva';
+import * as C from './common.js';
 import * as Modal from './modal.svelte';
 import ModalChoose from './modal_choose.svelte';
+import ModalAddUnit from './modal_addunit.svelte';
 
 // returns a promise that resolves to the index of the button that was clicked. Adds a Cancel button to the list
 // of buttons by default; clicking it or hitting Escape or clicking the overlay makes the promise resolve to -1.
@@ -74,7 +76,7 @@ let modalHolder, stage, stagePlaceholderEl, gridLayer, tileTypeLayer, tileLightL
 onMount(() =>
 {
     Modal.Init(modalHolder);
-    LoadImages();
+    C.LoadImages();
     stage = new K.Stage({
         container: 'actualStageHolder',
         draggable:false,
@@ -118,8 +120,10 @@ function SetupGrid()
             entry.y = y;
             entry.px = x*TILE_SIZE; // px,py = pixel coordinates of top-left of this tile
             entry.py = y*TILE_SIZE;
+            entry.units = []; // units currently living on this tile
 
             entry.type = 'empty';
+            entry.light = 'normal';
             entry.typeImage = new K.Image({x:entry.px, y:entry.py});
             tileTypeLayer.add(entry.typeImage);
 
@@ -127,28 +131,6 @@ function SetupGrid()
             tileLightLayer.add(entry.lightRect);
         }
         tiles.push(col);
-    }
-}
-
-// called on startup to create Image objects for any assets we'll reuse
-let imageCache = { // name -> obj w/ attrs .url, .image (Image object)
-    ttGrass:{url:'/images/tile_grass.png'},
-    ttWater:{url:'/images/tile_water.jpg'},
-    ttForest:{url:'/images/tile_forest.jpg'},
-    ttLava:{url:'/images/tile_lava.jpg'},
-    ttMtn:{url:'/images/tile_mtn.jpg'},
-    ttField:{url:'/images/tile_field.jpg'},
-    ttCastle:{url:'/images/tile_castle.jpg'},
-    ttSand:{url:'/images/tile_sand.jpg'},
-}; // name -> obj w/ attrs .url, .image (Image object), .loaded (t|f)
-function LoadImages()
-{
-    for (let [k,entry] of Object.entries(imageCache))
-    {
-        entry.loaded = false;
-        entry.image = new Image();
-        entry.image.onload = () => entry.loaded = true;
-        entry.image.src = entry.url;
     }
 }
 
@@ -292,12 +274,16 @@ function PaintTile()
     if (tool.propName == 'type')
     {
         entry.type = tool.propValue;
-        entry.typeImage.image(imageCache[tool.propValue].image);
+        entry.typeImage.image(C.imageCache[tool.propValue].image);
     }
     else if (tool.propName == 'light')
+    {
         entry.lightRect.fill(tool.propValue);
+        entry.light = tool.propValue;
+    }
 }
 
+// called when the window resizes and resizes the stage (canvas) to be the same size as the stage placeholder element
 async function OnWindowResize()
 {
     stage.size({width:stagePlaceholderEl.offsetWidth, height:stagePlaceholderEl.offsetHeight});
@@ -306,6 +292,27 @@ async function OnWindowResize()
 function SelectPaintTool(tool)
 {
     curPaintTool = tool;
+}
+
+// called when the user clicks the 'add unit' button on a tile to show them a modal to select the new unit
+function StartAddingUnit()
+{
+    OpenModal(ModalAddUnit).then(({closeCode, comp}) =>
+    {
+        if (closeCode != MODAL_OK) return;
+        console.log('Spawning', comp.unit);
+        let unit = {...comp.unit};
+        unit.pos = curTilePos;
+        curTile.units.push(unit);
+        curTilePos = curTilePos; // trigger a re-render
+    });
+}
+
+// removes unit at the given index from the currently selected tile
+function RemoveUnit(i)
+{
+    curTile.units.splice(i, 1);
+    curTilePos = curTilePos; // trigger a re-render
 }
 
 </script>
@@ -332,6 +339,24 @@ function SelectPaintTool(tool)
                 {#if curTilePos}
                     <p>Tile: {curTilePos[0]}, {curTilePos[1]}</p>
                     <p>Type: {curTile.type}</p>
+                    <p>Lighting: {curTile.light}</p>
+
+                    <p>Units on this tile:</p>
+                    <ul>
+                    {#each curTile.units as unit,i}
+                        <li>
+                            <button title="Delete this unit" on:click={()=>RemoveUnit(i)}>X</button>
+                            <img src={C.imageCache[unit.imageName].url}/>
+                            {unit.name} (AC: {unit.ac}
+                            HP:
+                            <button on:click={()=> unit.health = Math.max(0, unit.health-1)}>-</button>
+                            <input style="width:20px" bind:value={unit.health}/>
+                            <button on:click={()=> unit.health++}>+</button>
+                            )
+                        </li>
+                    {/each}
+                    </ul>
+                    <button on:click={StartAddingUnit} disabled={curTile.units.length>3}>Add unit</button>
                 {/if}
             </tileInfo>
             <appButtons>
@@ -401,6 +426,10 @@ screen {
                 flex:1;
                 background-color:#cc99cc;
                 padding:5px;
+            }
+
+            tileInfo > ul {
+                padding:0;
             }
 
             appButtons {

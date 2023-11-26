@@ -32,3 +32,4 @@ add unit dialog
 
 board/app buttons:
 - exit
+
