@@ -72,7 +72,7 @@ let curPaintTool = paintToolGroups[0].tools[0]; // one of the paintTools, i.e. w
 // hackery: the canvas/stage element is abs positioned so that as you resize the window, the right pane doesn't shift offscreen.
 // to make this work, we have an in-DOM element (called stagePlaceholder) that the browser resizes as needed, and then anytime
 // a resize happens, we resize the konva.Stage object which resizes the actual canvas element.
-let modalHolder, stage, stagePlaceholderEl, gridLayer, tileTypeLayer, tileLightLayer, tileMovementLayer;
+let modalHolder, stage, stagePlaceholderEl, gridLayer, tileTypeLayer, tileLightLayer, tileMovementLayer, tileUnitsLayer;
 onMount(() =>
 {
     Modal.Init(modalHolder);
@@ -94,12 +94,16 @@ onMount(() =>
     tileLightLayer = new K.Layer();
     stage.add(tileLightLayer);
 
+    // the tile units layer holds images for all unit icons
+    tileUnitsLayer = new K.Layer();
+    stage.add(tileUnitsLayer);
+
     // the grid layer just holds lines that draw the visible grid
     gridLayer = new K.Layer()
     stage.add(gridLayer);
     DrawGrid();
-
     SetupGrid();
+    DrawUnits();
 });
 
 // sets up the global grid to be a 2D array of objects with info and images for each tile on the grid
@@ -160,6 +164,38 @@ function DrawGrid()
         x *= TILE_SIZE;
         y *= TILE_SIZE;
         gridLayer.add(new K.Rect({x, y, width:TILE_SIZE, height:TILE_SIZE, stroke:'white', strokeWidth:2}));
+    }
+}
+
+// clears and redraws any units placed on tiles
+function DrawUnits()
+{
+    tileUnitsLayer.destroyChildren();
+    for (let x=0; x < GRID_W; x++)
+    {
+        for (let y=0; y < GRID_H; y++)
+        {
+            let entry = tiles[x][y];
+            for (let i=0; i < entry.units.length; i++)
+            {
+                let unit = entry.units[i];
+                let px = x*TILE_SIZE;
+                let py = y*TILE_SIZE;
+                if (entry.units.length == 1)
+                {   // the normal case: center it in the tile
+                    px += TILE_SIZE/4;
+                    py += TILE_SIZE/4;
+                }
+                else
+                {   // if multiple units are on this tile, move them to quadrants
+                    if (i == 1 || i == 3)
+                        px += TILE_SIZE/2;
+                    if (i > 1)
+                        py += TILE_SIZE/2;
+                }
+                tileUnitsLayer.add(new K.Image({x:px, y:py, image:C.imageCache[unit.imageName].image}));
+            }
+        }
     }
 }
 
@@ -305,6 +341,7 @@ function StartAddingUnit()
         unit.pos = curTilePos;
         curTile.units.push(unit);
         curTilePos = curTilePos; // trigger a re-render
+        DrawUnits();
     });
 }
 
@@ -313,6 +350,7 @@ function RemoveUnit(i)
 {
     curTile.units.splice(i, 1);
     curTilePos = curTilePos; // trigger a re-render
+    DrawUnits();
 }
 
 </script>
