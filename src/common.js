@@ -45,3 +45,10 @@ export function LoadImages()
     }
 }
 
+// returns a unique-ish ID for the next unit to spawn
+let nextUnitID = 100;
+export function GetUnitID()
+{
+    return nextUnitID++;
+}
+

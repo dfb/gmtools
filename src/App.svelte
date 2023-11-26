@@ -99,7 +99,7 @@ onMount(() =>
     stage.add(tileUnitsLayer);
 
     // the grid layer just holds lines that draw the visible grid
-    gridLayer = new K.Layer()
+    gridLayer = new K.Layer({listening:false}); // don't listen for events, so that we can drag units around on the lower layer
     stage.add(gridLayer);
     DrawGrid();
     SetupGrid();
@@ -179,6 +179,7 @@ function DrawUnits()
             for (let i=0; i < entry.units.length; i++)
             {
                 let unit = entry.units[i];
+                unit.image = null;
                 let px = x*TILE_SIZE;
                 let py = y*TILE_SIZE;
                 if (entry.units.length == 1)
@@ -193,10 +194,49 @@ function DrawUnits()
                     if (i > 1)
                         py += TILE_SIZE/2;
                 }
-                tileUnitsLayer.add(new K.Image({x:px, y:py, image:C.imageCache[unit.imageName].image}));
+                unit.image = new K.Image({draggable:true, x:px, y:py, image:C.imageCache[unit.imageName].image}); // keep a ref so we can drag it
+                unit.image.on('dragend', ()=>StopDragging(unit));
+                unit.image.on('dragmove', ()=>
+                {   // force the unit to stay on the grid
+                    let {x,y} = unit.image.position();
+                    x = Math.max(0, Math.min(TILE_SIZE*GRID_W-TILE_SIZE/2, x));
+                    y = Math.max(0, Math.min(TILE_SIZE*GRID_H-TILE_SIZE/2, y));
+                    unit.image.position({x,y});
+                });
+                tileUnitsLayer.add(unit.image);
             }
         }
     }
+}
+
+// called when the user drops a dragged unit onto a tile
+function StopDragging(unit)
+{
+    let [oldX, oldY] = curTilePos;
+    let [newX, newY] = TilePosUnderCursor(true);
+    if (oldX == newX && oldY == newY)
+    {
+        DrawUnits(); // still redraw, to force it into the right spot
+        return; // user dropped it on the same tile it was originally in
+    }
+
+    // don't let there be more than 4 per tile, at least for now
+    let newTile = tiles[newX][newY];
+    if (newTile.units.length > 3)
+    {
+        DrawUnits(); // still redraw, to force it into the right spot
+        return;
+    }
+
+    // remove the unit from the old tile and add it to the new one
+    curTile.units = curTile.units.filter(u => u.id != unit.id);
+    newTile.units.push(unit);
+
+    // select the tile the unit was dropped on and force a re-render
+    unit.pos = [newX, newY];
+    curTilePos = [newX, newY];
+    DrawUnits();
+    DrawGrid(); // to reflect that a new tile has been selected
 }
 
 // scale the stage relative to where the cursor is
@@ -288,11 +328,17 @@ function OnMouseUp(e)
 }
 
 // returns the [x,y] of the tile under the cursor or [-1,-1] if the cursor is outside the grid
-function TilePosUnderCursor()
+// if forceValid is true, the position is clipped to be inside the grid.
+function TilePosUnderCursor(forceValid=false)
 {
     let {x, y} = stage.getRelativePointerPosition();
     x = Math.trunc(x / TILE_SIZE);
     y = Math.trunc(y / TILE_SIZE);
+    if (forceValid)
+    {
+        x = Math.max(0, Math.min(GRID_W-1, x));
+        y = Math.max(0, Math.min(GRID_H-1, y));
+    }
     if (x < 0 || y < 0 || x > GRID_W-1 || y > GRID_H-1) return [-1,-1]; // outside of the grid
     return [x,y];
 }
@@ -337,7 +383,7 @@ function StartAddingUnit()
     {
         if (closeCode != MODAL_OK) return;
         console.log('Spawning', comp.unit);
-        let unit = {...comp.unit};
+        let unit = {id:C.GetUnitID(), ...comp.unit};
         unit.pos = curTilePos;
         curTile.units.push(unit);
         curTilePos = curTilePos; // trigger a re-render
