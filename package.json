@@ -6,16 +6,18 @@
   "browser": "src/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "deploy":"gh-pages -d build"
   },
   "license": "ISC",
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^2.5.2",
+    "gh-pages": "^6.1.0",
     "svelte": "^4.2.7",
     "vite": "^4.5.0"
   },
   "dependencies": {
-    "konva": "^9.2.3",
-    "svelte-konva": "^0.3.1"
-  }
+    "konva": "^9.2.3"
+  },
+  "homepage:": "https://dfb.github.io/gmtools"
 }

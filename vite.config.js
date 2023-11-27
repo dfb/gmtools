@@ -10,5 +10,9 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 8000
   },
+  build: {
+      outDir: "build"
+  },
+  base:'', // no leading slash on urls please
   plugins: [svelte()],
 })
