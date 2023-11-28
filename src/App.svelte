@@ -37,7 +37,6 @@ window.AlertModal = function(body, title=' ')
 }
 
 
-
 let paintToolGroups = [ // list of rows of objects describing different tools you can paint with. id must be unique.
     {
         label:'Type:',
