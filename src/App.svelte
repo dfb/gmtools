@@ -5,6 +5,7 @@ import * as C from './common.js';
 import * as Modal from './modal.svelte';
 import ModalChoose from './modal_choose.svelte';
 import ModalAddUnit from './modal_addunit.svelte';
+  import SettingsModal from './SettingsModal.svelte';
 
 // returns a promise that resolves to the index of the button that was clicked. Adds a Cancel button to the list
 // of buttons by default; clicking it or hitting Escape or clicking the overlay makes the promise resolve to -1.
@@ -35,8 +36,8 @@ window.AlertModal = function(body, title=' ')
     return ChooseModal(body, title, ['Ok'], false);
 }
 
-const GRID_W = 20; // number of tiles in X and Y. TODO: this will become configurable
-const GRID_H = 15;
+let GRID_W = 20; // number of tiles in X and Y. TODO: this will become configurable
+let GRID_H = 15;
 const TILE_SIZE = 64; // size of tiles in pixels in both X and Y directions
 
 let paintToolGroups = [ // list of rows of objects describing different tools you can paint with. id must be unique.
@@ -391,6 +392,20 @@ function StartAddingUnit()
     });
 }
 
+function OpenResizeModal()
+{
+    OpenModal(SettingsModal).then(({closeCode, comp}) =>
+    {
+        if (closeCode != MODAL_OK) return;
+        let size = {...comp.size};
+        let height = size['height']
+        let width = size['width']
+        GRID_H = height;
+        GRID_W = width;
+        DrawGrid();
+    });
+}
+
 // removes unit at the given index from the currently selected tile
 function RemoveUnit(i)
 {
@@ -444,7 +459,7 @@ function RemoveUnit(i)
                 {/if}
             </tileInfo>
             <appButtons>
-                app buttons go here
+                <button on:click={OpenResizeModal} >Resize</button>
             </appButtons>
         </infoPane>
     </clientArea>
