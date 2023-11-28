@@ -52,3 +52,11 @@ export function GetUnitID()
     return nextUnitID++;
 }
 
+export let GRID_H = 15;
+export let GRID_W = 20;
+export let TILE_SIZE = 20;
+
+export function SetGridSize(height, width) {
+    GRID_H = height;
+    GRID_W = width;
+}

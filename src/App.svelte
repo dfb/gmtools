@@ -5,6 +5,7 @@ import * as C from './common.js';
 import * as Modal from './modal.svelte';
 import ModalChoose from './modal_choose.svelte';
 import ModalAddUnit from './modal_addunit.svelte';
+  import SettingsModal from './SettingsModal.svelte';
 
 // returns a promise that resolves to the index of the button that was clicked. Adds a Cancel button to the list
 // of buttons by default; clicking it or hitting Escape or clicking the overlay makes the promise resolve to -1.
@@ -35,9 +36,7 @@ window.AlertModal = function(body, title=' ')
     return ChooseModal(body, title, ['Ok'], false);
 }
 
-const GRID_W = 20; // number of tiles in X and Y. TODO: this will become configurable
-const GRID_H = 15;
-const TILE_SIZE = 64; // size of tiles in pixels in both X and Y directions
+
 
 let paintToolGroups = [ // list of rows of objects describing different tools you can paint with. id must be unique.
     {
@@ -111,10 +110,10 @@ let tiles;
 function SetupGrid()
 {
     tiles = [];
-    for (let x=0; x < GRID_W; x++) // we'll make it like the screen, X coord indexes into a column of entries
+    for (let x=0; x < C.GRID_W; x++) // we'll make it like the screen, X coord indexes into a column of entries
     {
         let col = [];
-        for (let y=0; y < GRID_H; y++)
+        for (let y=0; y < C.GRID_H; y++)
         {
             let entry = {};
             col.push(entry);
@@ -122,8 +121,8 @@ function SetupGrid()
             // do any per-tile initialization here
             entry.x = x;
             entry.y = y;
-            entry.px = x*TILE_SIZE; // px,py = pixel coordinates of top-left of this tile
-            entry.py = y*TILE_SIZE;
+            entry.px = x*C.TILE_SIZE; // px,py = pixel coordinates of top-left of this tile
+            entry.py = y*C.TILE_SIZE;
             entry.units = []; // units currently living on this tile
 
             entry.type = 'empty';
@@ -131,7 +130,7 @@ function SetupGrid()
             entry.typeImage = new K.Image({x:entry.px, y:entry.py});
             tileTypeLayer.add(entry.typeImage);
 
-            entry.lightRect = new K.Rect({x:entry.px, y:entry.py, width:TILE_SIZE, height:TILE_SIZE});
+            entry.lightRect = new K.Rect({x:entry.px, y:entry.py, width:C.TILE_SIZE, height:C.TILE_SIZE});
             tileLightLayer.add(entry.lightRect);
         }
         tiles.push(col);
@@ -142,28 +141,28 @@ function SetupGrid()
 function DrawGrid()
 {
     let strokeParams = {stroke:'black', strokeWidth:2};
-    let w = TILE_SIZE*GRID_W;
-    let h = TILE_SIZE*GRID_H;
+    let w = C.TILE_SIZE*C.GRID_W;
+    let h = C.TILE_SIZE*C.GRID_H;
     gridLayer.destroyChildren();
     gridLayer.add(new K.Rect({x:0, y:0, width:w, height:h, ...strokeParams}));
-    for (let i=1; i < GRID_W; i++)
+    for (let i=1; i < C.GRID_W; i++)
     {
-        let x = TILE_SIZE*i;
+        let x = C.TILE_SIZE*i;
         gridLayer.add(new K.Line({points:[x, 0, x, h], ...strokeParams}));
     }
 
-    for (let i=1; i < GRID_H; i++)
+    for (let i=1; i < C.GRID_H; i++)
     {
-        let y = TILE_SIZE*i;
+        let y = C.TILE_SIZE*i;
         gridLayer.add(new K.Line({points:[0, y, w, y], ...strokeParams}));
     }
 
     if (curTilePos != null)
     {   // show one tile as selected
         let [x,y] = curTilePos;
-        x *= TILE_SIZE;
-        y *= TILE_SIZE;
-        gridLayer.add(new K.Rect({x, y, width:TILE_SIZE, height:TILE_SIZE, stroke:'white', strokeWidth:2}));
+        x *= C.TILE_SIZE;
+        y *= C.TILE_SIZE;
+        gridLayer.add(new K.Rect({x, y, width:C.TILE_SIZE, height:C.TILE_SIZE, stroke:'white', strokeWidth:2}));
     }
 }
 
@@ -171,36 +170,36 @@ function DrawGrid()
 function DrawUnits()
 {
     tileUnitsLayer.destroyChildren();
-    for (let x=0; x < GRID_W; x++)
+    for (let x=0; x < C.GRID_W; x++)
     {
-        for (let y=0; y < GRID_H; y++)
+        for (let y=0; y < C.GRID_H; y++)
         {
             let entry = tiles[x][y];
             for (let i=0; i < entry.units.length; i++)
             {
                 let unit = entry.units[i];
                 unit.image = null;
-                let px = x*TILE_SIZE;
-                let py = y*TILE_SIZE;
+                let px = x*C.TILE_SIZE;
+                let py = y*C.TILE_SIZE;
                 if (entry.units.length == 1)
                 {   // the normal case: center it in the tile
-                    px += TILE_SIZE/4;
-                    py += TILE_SIZE/4;
+                    px += C.TILE_SIZE/4;
+                    py += C.TILE_SIZE/4;
                 }
                 else
                 {   // if multiple units are on this tile, move them to quadrants
                     if (i == 1 || i == 3)
-                        px += TILE_SIZE/2;
+                        px += C.TILE_SIZE/2;
                     if (i > 1)
-                        py += TILE_SIZE/2;
+                        py += C.TILE_SIZE/2;
                 }
                 unit.image = new K.Image({draggable:true, x:px, y:py, image:C.imageCache[unit.imageName].image}); // keep a ref so we can drag it
                 unit.image.on('dragend', ()=>StopDragging(unit));
                 unit.image.on('dragmove', ()=>
                 {   // force the unit to stay on the grid
                     let {x,y} = unit.image.position();
-                    x = Math.max(0, Math.min(TILE_SIZE*GRID_W-TILE_SIZE/2, x));
-                    y = Math.max(0, Math.min(TILE_SIZE*GRID_H-TILE_SIZE/2, y));
+                    x = Math.max(0, Math.min(C.TILE_SIZE*C.GRID_W-C.TILE_SIZE/2, x));
+                    y = Math.max(0, Math.min(C.TILE_SIZE*C.GRID_H-C.TILE_SIZE/2, y));
                     unit.image.position({x,y});
                 });
                 tileUnitsLayer.add(unit.image);
@@ -332,14 +331,14 @@ function OnMouseUp(e)
 function TilePosUnderCursor(forceValid=false)
 {
     let {x, y} = stage.getRelativePointerPosition();
-    x = Math.trunc(x / TILE_SIZE);
-    y = Math.trunc(y / TILE_SIZE);
+    x = Math.trunc(x / C.TILE_SIZE);
+    y = Math.trunc(y / C.TILE_SIZE);
     if (forceValid)
     {
-        x = Math.max(0, Math.min(GRID_W-1, x));
-        y = Math.max(0, Math.min(GRID_H-1, y));
+        x = Math.max(0, Math.min(C.GRID_W-1, x));
+        y = Math.max(0, Math.min(C.GRID_H-1, y));
     }
-    if (x < 0 || y < 0 || x > GRID_W-1 || y > GRID_H-1) return [-1,-1]; // outside of the grid
+    if (x < 0 || y < 0 || x > C.GRID_W-1 || y > C.GRID_H-1) return [-1,-1]; // outside of the grid
     return [x,y];
 }
 
@@ -388,6 +387,19 @@ function StartAddingUnit()
         curTile.units.push(unit);
         curTilePos = curTilePos; // trigger a re-render
         DrawUnits();
+    });
+}
+
+function OpenResizeModal()
+{
+    OpenModal(SettingsModal).then(({closeCode, comp}) =>
+    {
+        if (closeCode != MODAL_OK) return;
+        let size = {...comp.size};
+        let height = size['height']
+        let width = size['width']
+        C.SetGridSize(height, width);
+        DrawGrid();
     });
 }
 
@@ -444,7 +456,7 @@ function RemoveUnit(i)
                 {/if}
             </tileInfo>
             <appButtons>
-                app buttons go here
+                <button on:click={OpenResizeModal} >Resize</button>
             </appButtons>
         </infoPane>
     </clientArea>
