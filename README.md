@@ -1,5 +1,5 @@
 # gmtools
-Experiments in tools to help gamemasters
+Experiments in tools to help gamemasters. Recent version lives here: https://dfb.github.io/gmtools/
 
 tech
 - svelte + vite
