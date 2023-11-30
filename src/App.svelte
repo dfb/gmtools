@@ -3,6 +3,7 @@ import { onMount } from 'svelte';
 import * as K from 'konva';
 import * as C from './common.js';
 import * as Modal from './modal.svelte';
+import * as DB from './db.js';
 import ModalChoose from './modal_choose.svelte';
 import ModalAddUnit from './modal_addunit.svelte';
 import ModalResize from './modal_resize.svelte';
@@ -70,6 +71,7 @@ let curPaintTool = paintToolGroups[0].tools[0]; // one of the paintTools, i.e. w
 // hackery: the canvas/stage element is abs positioned so that as you resize the window, the right pane doesn't shift offscreen.
 // to make this work, we have an in-DOM element (called stagePlaceholder) that the browser resizes as needed, and then anytime
 // a resize happens, we resize the konva.Stage object which resizes the actual canvas element.
+let board = null; // the currently loaded board as returned from DB.CreateBoard or DB.LoadBoard
 let modalHolder, stage, stagePlaceholderEl, gridLayer, tileTypeLayer, tileLightLayer, tileMovementLayer, tileUnitsLayer;
 onMount(() =>
 {
@@ -99,58 +101,65 @@ onMount(() =>
     // the grid layer just holds lines that draw the visible grid
     gridLayer = new K.Layer({listening:false}); // don't listen for events, so that we can drag units around on the lower layer
     stage.add(gridLayer);
-    DrawGrid();
-    SetupGrid();
-    DrawUnits();
+
+    // temp hackery until we have the load/create flows done: load the first board if one exists, else create a new one
+    // either way, set it to the global 'board' var
+    DB.ListBoards().then(boards =>
+    {
+        if (boards && boards.length)
+            DB.LoadBoard(boards[0].id).then(b => InitBoard(b));
+        else
+            DB.CreateBoard('test', 30, 20).then(b => InitBoard(b));
+    });
 });
 
-// sets up the global grid to be a 2D array of objects with info and images for each tile on the grid
-let tiles;
-function SetupGrid()
+// called after loading or creating a board - saves a ref to the global 'board' var, adds info we need to tiles, triggers the first render
+function InitBoard(b)
 {
-    tiles = [];
-    for (let x=0; x < C.GRID_W; x++) // we'll make it like the screen, X coord indexes into a column of entries
+    // TODO: we can't really run this safely until we know the images have loaded
+
+    board = b;
+
+    // set any per-tile info we'll need
+    for (let x=0; x < board.w; x++)
     {
-        let col = [];
-        for (let y=0; y < C.GRID_H; y++)
+        for (let y=0; y < board.h; y++)
         {
-            let entry = {};
-            col.push(entry);
+            let tile = board.tiles[x][y];
+            let px = x*C.TILE_SIZE; // px,py = pixel coords of top-left of this tile
+            let py = y*C.TILE_SIZE;
 
-            // do any per-tile initialization here
-            entry.x = x;
-            entry.y = y;
-            entry.px = x*C.TILE_SIZE; // px,py = pixel coordinates of top-left of this tile
-            entry.py = y*C.TILE_SIZE;
-            entry.units = []; // units currently living on this tile
+            tile.typeImage = new K.Image({x:px, y:py});
+            tileTypeLayer.add(tile.typeImage);
+            if (tile.type != 'empty')
+                tile.typeImage.image(C.imageCache[tile.type].image);
 
-            entry.type = 'empty';
-            entry.light = 'normal';
-            entry.typeImage = new K.Image({x:entry.px, y:entry.py});
-            tileTypeLayer.add(entry.typeImage);
-
-            entry.lightRect = new K.Rect({x:entry.px, y:entry.py, width:C.TILE_SIZE, height:C.TILE_SIZE});
-            tileLightLayer.add(entry.lightRect);
+            tile.lightRect = new K.Rect({x:px, y:py, width:C.TILE_SIZE, height:C.TILE_SIZE});
+            tileLightLayer.add(tile.lightRect);
+            if (tile.light != 'normal')
+                tile.lightRect.fill(tile.light);
         }
-        tiles.push(col);
     }
+
+    DrawGrid();
+    DrawUnits();
 }
 
 // clears and redraws the grid lines
 function DrawGrid()
 {
     let strokeParams = {stroke:'black', strokeWidth:2};
-    let w = C.TILE_SIZE*C.GRID_W;
-    let h = C.TILE_SIZE*C.GRID_H;
+    let w = C.TILE_SIZE*board.w;
+    let h = C.TILE_SIZE*board.h;
     gridLayer.destroyChildren();
     gridLayer.add(new K.Rect({x:0, y:0, width:w, height:h, ...strokeParams}));
-    for (let i=1; i < C.GRID_W; i++)
+    for (let i=1; i < board.w; i++)
     {
         let x = C.TILE_SIZE*i;
         gridLayer.add(new K.Line({points:[x, 0, x, h], ...strokeParams}));
     }
 
-    for (let i=1; i < C.GRID_H; i++)
+    for (let i=1; i < board.h; i++)
     {
         let y = C.TILE_SIZE*i;
         gridLayer.add(new K.Line({points:[0, y, w, y], ...strokeParams}));
@@ -169,11 +178,11 @@ function DrawGrid()
 function DrawUnits()
 {
     tileUnitsLayer.destroyChildren();
-    for (let x=0; x < C.GRID_W; x++)
+    for (let x=0; x < board.w; x++)
     {
-        for (let y=0; y < C.GRID_H; y++)
+        for (let y=0; y < board.h; y++)
         {
-            let entry = tiles[x][y];
+            let entry = board.tiles[x][y];
             for (let i=0; i < entry.units.length; i++)
             {
                 let unit = entry.units[i];
@@ -197,8 +206,8 @@ function DrawUnits()
                 unit.image.on('dragmove', ()=>
                 {   // force the unit to stay on the grid
                     let {x,y} = unit.image.position();
-                    x = Math.max(0, Math.min(C.TILE_SIZE*C.GRID_W-C.TILE_SIZE/2, x));
-                    y = Math.max(0, Math.min(C.TILE_SIZE*C.GRID_H-C.TILE_SIZE/2, y));
+                    x = Math.max(0, Math.min(C.TILE_SIZE*board.w-C.TILE_SIZE/2, x));
+                    y = Math.max(0, Math.min(C.TILE_SIZE*board.h-C.TILE_SIZE/2, y));
                     unit.image.position({x,y});
                 });
                 tileUnitsLayer.add(unit.image);
@@ -219,7 +228,7 @@ function StopDragging(unit)
     }
 
     // don't let there be more than 4 per tile, at least for now
-    let newTile = tiles[newX][newY];
+    let newTile = board.tiles[newX][newY];
     if (newTile.units.length > 3)
     {
         DrawUnits(); // still redraw, to force it into the right spot
@@ -235,6 +244,7 @@ function StopDragging(unit)
     curTilePos = [newX, newY];
     DrawUnits();
     DrawGrid(); // to reflect that a new tile has been selected
+    DB.SaveBoard(board);
 }
 
 // scale the stage relative to where the cursor is
@@ -264,8 +274,9 @@ function OnMouseWheel(e)
 
 let panStartOffset=null; // for moving around the view of the board
 let paintingTiles = false;
+let tilesPainted = 0; // during a drag, how many tiles were modified
 let curTilePos = null; // [tileX, tileY] of currently selected tile or null
-$:curTile = curTilePos != null ? tiles[curTilePos[0]][curTilePos[1]] : null;
+$:curTile = board != null && curTilePos != null ? board.tiles[curTilePos[0]][curTilePos[1]] : null;
 
 function OnMouseDown(e)
 {
@@ -274,6 +285,7 @@ function OnMouseDown(e)
         if (e.shiftKey)
         {   // begin painting tile properties
             paintingTiles = true;
+            tilesPainted = 0;
             PaintTile();
             e.preventDefault();
         }
@@ -317,6 +329,8 @@ function OnMouseUp(e)
     {
         e.preventDefault();
         paintingTiles = false;
+        if (tilesPainted)
+            DB.SaveBoard(board);
     }
     else if (e.button == 2 && panStartOffset != null) // right button up
     {
@@ -334,10 +348,10 @@ function TilePosUnderCursor(forceValid=false)
     y = Math.trunc(y / C.TILE_SIZE);
     if (forceValid)
     {
-        x = Math.max(0, Math.min(C.GRID_W-1, x));
-        y = Math.max(0, Math.min(C.GRID_H-1, y));
+        x = Math.max(0, Math.min(board.w-1, x));
+        y = Math.max(0, Math.min(board.h-1, y));
     }
-    if (x < 0 || y < 0 || x > C.GRID_W-1 || y > C.GRID_H-1) return [-1,-1]; // outside of the grid
+    if (x < 0 || y < 0 || x > board.w-1 || y > board.h-1) return [-1,-1]; // outside of the grid
     return [x,y];
 }
 
@@ -346,20 +360,21 @@ function TilePosUnderCursor(forceValid=false)
 function PaintTile()
 {
     if (!curPaintTool) return;
+    tilesPainted++;
     let [x,y] = TilePosUnderCursor();
     if (x == -1) return; // outside the grid
-    let entry = tiles[x][y];
+    let tile = board.tiles[x][y];
 
     let tool = curPaintTool;
     if (tool.propName == 'type')
     {
-        entry.type = tool.propValue;
-        entry.typeImage.image(C.imageCache[tool.propValue].image);
+        tile.type = tool.propValue;
+        tile.typeImage.image(C.imageCache[tool.propValue].image);
     }
     else if (tool.propName == 'light')
     {
-        entry.lightRect.fill(tool.propValue);
-        entry.light = tool.propValue;
+        tile.lightRect.fill(tool.propValue);
+        tile.light = tool.propValue;
     }
 }
 
@@ -386,6 +401,7 @@ function StartAddingUnit()
         curTile.units.push(unit);
         curTilePos = curTilePos; // trigger a re-render
         DrawUnits();
+        DB.SaveBoard(board);
     });
 }
 
@@ -399,7 +415,7 @@ function OpenResizeModal()
         let width = size['width']
         C.SetGridSize(height, width);
         DrawGrid();
-        SetupGrid();
+        //SetupGrid(); TODO
         DrawUnits();
     });
 }
