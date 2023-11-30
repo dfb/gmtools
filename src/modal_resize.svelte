@@ -9,12 +9,19 @@ let current_size = height * width
 let new_height = 0;
 let new_width = 0;
 
+const MIN_SIZE = 0;
+const MAX_SIZE = 10000;
 
 let valid = false;
-$: valid = new_height * new_width > 0 && new_height * new_width != current_size;
+$: valid = new_height * new_width > MIN_SIZE && 
+            new_height * new_width <= MAX_SIZE &&
+            (new_height !== height || new_width !== width);
 
 let warning = '';
 $: warning = new_height * new_width < height * width  && valid ? 'Warning: New size will be smaller than current size' : '';
+
+let warning_big = '';
+$: warning_big = new_height * new_width > MAX_SIZE ? `Size w*h must be <= ${MAX_SIZE} (would be: ${new_height * new_width})` : '';
 
 
 function Cancel()
@@ -40,6 +47,9 @@ function Add()
     </content>
     {#if warning}
         <p style="color: red;">{warning}</p>
+    {/if}
+    {#if warning_big}
+        <p style="color: red;">{warning_big}</p>
     {/if}
     <div class="buttons">
         <button class="btn-secondary" on:click={Cancel}>Cancel</button>
