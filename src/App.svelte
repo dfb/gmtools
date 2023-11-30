@@ -5,7 +5,7 @@ import * as C from './common.js';
 import * as Modal from './modal.svelte';
 import ModalChoose from './modal_choose.svelte';
 import ModalAddUnit from './modal_addunit.svelte';
-  import SettingsModal from './SettingsModal.svelte';
+import ModalResize from './modal_resize.svelte';
 
 // returns a promise that resolves to the index of the button that was clicked. Adds a Cancel button to the list
 // of buttons by default; clicking it or hitting Escape or clicking the overlay makes the promise resolve to -1.
@@ -391,7 +391,7 @@ function StartAddingUnit()
 
 function OpenResizeModal()
 {
-    OpenModal(SettingsModal).then(({closeCode, comp}) =>
+    OpenModal(ModalResize).then(({closeCode, comp}) =>
     {
         if (closeCode != MODAL_OK) return;
         let size = {...comp.size};
@@ -399,6 +399,8 @@ function OpenResizeModal()
         let width = size['width']
         C.SetGridSize(height, width);
         DrawGrid();
+        SetupGrid();
+        DrawUnits();
     });
 }
 
