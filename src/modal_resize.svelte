@@ -2,12 +2,10 @@
 <script>
 import Modal from './modal.svelte';
 import * as C from './common' 
+export let curW, curH; // IN: the current board dimensions
 export let size = null; // info on the unit the user wants to spawn
-let height = C.GRID_H;
-let width = C.GRID_W;
-let current_size = height * width
-let new_height = 0;
-let new_width = 0;
+let new_height = curH;
+let new_width = curW;
 
 const MIN_SIZE = 0;
 const MAX_SIZE = 10000;
@@ -15,10 +13,10 @@ const MAX_SIZE = 10000;
 let valid = false;
 $: valid = new_height * new_width > MIN_SIZE && 
             new_height * new_width <= MAX_SIZE &&
-            (new_height !== height || new_width !== width);
+            (new_height !== curH || new_width !== curW);
 
 let warning = '';
-$: warning = new_height * new_width < height * width  && valid ? 'Warning: New size will be smaller than current size' : '';
+$: warning = new_height * new_width < curH * curW  && valid ? 'Warning: New size will be smaller than current size' : '';
 
 let warning_big = '';
 $: warning_big = new_height * new_width > MAX_SIZE ? `Size w*h must be <= ${MAX_SIZE} (would be: ${new_height * new_width})` : '';
@@ -39,7 +37,7 @@ function Add()
 <Modal>
     <h1>Resize Grid</h1>
     <content>
-        <p>Current size: {height}/{width}</p>
+        <p>Current size: {curW}x{curH}</p>
         <p>
             Height: <input type="int" bind:value={new_height} />
             width: <input type="int" bind:value={new_width} />

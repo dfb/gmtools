@@ -407,16 +407,11 @@ function StartAddingUnit()
 
 function OpenResizeModal()
 {
-    OpenModal(ModalResize).then(({closeCode, comp}) =>
+    OpenModal(ModalResize, {curW:board.w, curH:board.h}).then(({closeCode, comp}) =>
     {
         if (closeCode != MODAL_OK) return;
-        let size = {...comp.size};
-        let height = size['height']
-        let width = size['width']
-        C.SetGridSize(height, width);
-        DrawGrid();
-        //SetupGrid(); TODO
-        DrawUnits();
+        let {width, height} = comp.size;
+        DB.ResizeBoard(board, width, height).then(newBoard => InitBoard(newBoard));
     });
 }
 

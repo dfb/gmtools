@@ -52,12 +52,5 @@ export function GetUnitID()
     return nextUnitID++;
 }
 
-export let GRID_H = 15;
-export let GRID_W = 20;
-export let TILE_SIZE = 64;
+export let TILE_SIZE = 64; // w/h of each tile, in pixels
 
-export function SetGridSize(height, width, force=false) {
-    GRID_H = height;
-    GRID_W = width;
-    return 'valid'
-}
