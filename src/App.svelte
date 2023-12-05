@@ -456,6 +456,11 @@ function RemoveUnit(i)
                             <button title="Delete this unit" on:click={()=>RemoveUnit(i)}>X</button>
                             <img src={C.imageCache[unit.imageName].url}/>
                             {unit.name} (AC: {unit.ac}
+
+                            <button on:click={()=> unit.ac= Math.max(0, unit.ac-1)}>-</button>
+                            <input style="width:20px" bind:value={unit.ac}/>
+                            <button on:click={()=> unit.ac++}>+</button>
+
                             HP:
                             <button on:click={()=> unit.health = Math.max(0, unit.health-1)}>-</button>
                             <input style="width:20px" bind:value={unit.health}/>
