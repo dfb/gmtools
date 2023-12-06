@@ -30,6 +30,5 @@ add unit dialog
 - then adjust AC, health, name, note, whatever
 - optionally roll for attributes
 
-board/app buttons:
-- exit
-
+future
+- walls/doors

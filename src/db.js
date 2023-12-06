@@ -96,6 +96,7 @@ export function LoadBoard(id)
 export function DeleteBoard(id)
 {
     let boards = _getBoardList();
+    delete localStorage['board_'+id];
     boards = boards.filter(b => b.id != id);
     _setBoardList(boards);
     return new Promise(resolve => resolve());

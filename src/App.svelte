@@ -7,6 +7,7 @@ import * as DB from './db.js';
 import ModalChoose from './modal_choose.svelte';
 import ModalAddUnit from './modal_addunit.svelte';
 import ModalResize from './modal_resize.svelte';
+import ModalWelcome from './modal_welcome.svelte';
 
 // returns a promise that resolves to the index of the button that was clicked. Adds a Cancel button to the list
 // of buttons by default; clicking it or hitting Escape or clicking the overlay makes the promise resolve to -1.
@@ -72,7 +73,7 @@ let curPaintTool = paintToolGroups[0].tools[0]; // one of the paintTools, i.e. w
 // to make this work, we have an in-DOM element (called stagePlaceholder) that the browser resizes as needed, and then anytime
 // a resize happens, we resize the konva.Stage object which resizes the actual canvas element.
 let board = null; // the currently loaded board as returned from DB.CreateBoard or DB.LoadBoard
-let modalHolder, stage, stagePlaceholderEl, gridLayer, tileTypeLayer, tileLightLayer, tileMovementLayer, tileUnitsLayer;
+let modalHolder, stage, stagePlaceholderEl, gridLayer, tileTypeLayer, tileLightLayer, tileMovementLayer, tileUnitsLayer, initDone=false;
 onMount(() =>
 {
     Modal.Init(modalHolder);
@@ -101,26 +102,20 @@ onMount(() =>
     // the grid layer just holds lines that draw the visible grid
     gridLayer = new K.Layer({listening:false}); // don't listen for events, so that we can drag units around on the lower layer
     stage.add(gridLayer);
-
-    // temp hackery until we have the load/create flows done: load the first board if one exists, else create a new one
-    // either way, set it to the global 'board' var
-    DB.ListBoards().then(boards =>
-    {
-        if (boards && boards.length)
-            DB.LoadBoard(boards[0].id).then(b => InitBoard(b));
-        else
-            DB.CreateBoard('test', 30, 20).then(b => InitBoard(b));
-    });
+    initDone = true; // trigger welcome modal
 });
+
+$:if (initDone && !board)
+    OpenModal(ModalWelcome).then(({closeCode, comp}) => InitBoard(comp.board));
 
 // called after loading or creating a board - saves a ref to the global 'board' var, adds info we need to tiles, triggers the first render
 function InitBoard(b)
 {
     // TODO: we can't really run this safely until we know the images have loaded
-
     board = b;
 
     // set any per-tile info we'll need
+    tileTypeLayer.destroyChildren();
     for (let x=0; x < board.w; x++)
     {
         for (let y=0; y < board.h; y++)
@@ -473,7 +468,8 @@ function RemoveUnit(i)
                 {/if}
             </tileInfo>
             <appButtons>
-                <button on:click={OpenResizeModal} >Resize</button>
+                <button on:click={OpenResizeModal} >Resize board</button>
+                <button on:click={() => board=null}>Close board</button>
             </appButtons>
         </infoPane>
     </clientArea>
