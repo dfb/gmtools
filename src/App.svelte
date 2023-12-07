@@ -9,6 +9,8 @@ import ModalAddUnit from './modal_addunit.svelte';
 import ModalResize from './modal_resize.svelte';
 import ModalWelcome from './modal_welcome.svelte';
 
+let pageParams = new URLSearchParams(window.location.search);
+
 // returns a promise that resolves to the index of the button that was clicked. Adds a Cancel button to the list
 // of buttons by default; clicking it or hitting Escape or clicking the overlay makes the promise resolve to -1.
 window.ChooseModal = function(body, title, nonCancelButtonLabels, addCancelButton=true)
@@ -111,7 +113,14 @@ onMount(() =>
 });
 
 $:if (initDone && !board)
-    OpenModal(ModalWelcome).then(({closeCode, comp}) => InitBoard(comp.board));
+{
+    // load a board if specified in the URL, otherwise open the load/create dialog
+    let boardID = pageParams.get('board');
+    if (boardID)
+        DB.LoadBoard(boardID).then(b => InitBoard(b));
+    else
+        OpenModal(ModalWelcome).then(({closeCode, comp}) => InitBoard(comp.board));
+}
 
 // called after loading or creating a board - saves a ref to the global 'board' var, adds info we need to tiles, triggers the first render
 function InitBoard(b)

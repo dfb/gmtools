@@ -91,6 +91,7 @@ export function LoadBoard(id)
     {
         let board = localStorage.getItem('board_'+id);
         board = JSON.parse(board);
+        console.log('Loading', board.id);
         resolve(board);
     });
 }
