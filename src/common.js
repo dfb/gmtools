@@ -14,6 +14,8 @@ export const UNITS = [ // available units that you can spawn - TODO: these shoul
 
 // called on startup to create Image objects for any assets we'll reuse. TODO: add this to one image and load as an image atlas
 export let imageCache = { // name -> obj w/ attrs .url, .image (Image object)
+    mvRestricted:{url:'images/move_restricted.png'},
+    mvUnpassable:{url:'images/move_unpassable.png'},
     ttGrass:{url:'images/tile_grass.png'},
     ttWater:{url:'images/tile_water.jpg'},
     ttForest:{url:'images/tile_forest.jpg'},

@@ -47,12 +47,14 @@ function _CreateBoardObject(name, w, h, ref=null)
                 let refTile = ref.tiles[x][y];
                 tile.type = refTile.type;
                 tile.light = refTile.light;
+                tile.movement = refTile.movement;
                 tile.units = [...refTile.units]; // TODO: should probably make a deep copy
             }
             else
             {
                 tile.type = 'empty';
                 tile.light = 'normal';
+                tile.movement = '';
                 tile.units = [];
             }
             col.push(tile);
@@ -115,7 +117,7 @@ export function SaveBoard(board)
             for (let y=0; y < board.h; y++)
             {
                 let tile = board.tiles[x][y];
-                let tileCopy = {type:tile.type, light:tile.light, units:tile.units};
+                let tileCopy = {type:tile.type, light:tile.light, movement:tile.movement, units:tile.units};
                 colCopy.push(tileCopy);
             }
             boardCopy.tiles.push(colCopy);

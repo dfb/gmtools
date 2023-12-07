@@ -38,12 +38,11 @@ window.AlertModal = function(body, title=' ')
     return ChooseModal(body, title, ['Ok'], false);
 }
 
-
 let paintToolGroups = [ // list of rows of objects describing different tools you can paint with. id must be unique.
     {
         label:'Type:',
         tools:[
-            {id:'tGrass', propName:'type', propValue:'ttGrass'},
+            {id: 'tGrass', propName:'type', propValue:'ttGrass'},
             {id: 'tWater', propName:'type', propValue:'ttWater'},
             {id: 'tForest', propName:'type', propValue:'ttForest'},
             {id: 'tLava', propName:'type', propValue:'ttLava'},
@@ -64,6 +63,9 @@ let paintToolGroups = [ // list of rows of objects describing different tools yo
     {
         label:'Movement:',
         tools:[
+            {id: 'mvNormal', propName:'movement', propValue:'normal'},
+            {id: 'mvRestricted', propName:'movement', propValue:'mvRestricted'},
+            {id: 'mvUnpassable', propName:'movement', propValue:'mvUnpassable'}
         ]
     }
 ];
@@ -94,6 +96,9 @@ onMount(() =>
     // the tile light layer holds a konva Rect for each tile to show normal vs dim vs dark lighting
     tileLightLayer = new K.Layer();
     stage.add(tileLightLayer);
+
+    tileMovementLayer = new K.Layer();
+    stage.add(tileMovementLayer);
 
     // the tile units layer holds images for all unit icons
     tileUnitsLayer = new K.Layer();
@@ -133,6 +138,11 @@ function InitBoard(b)
             tileLightLayer.add(tile.lightRect);
             if (tile.light != 'normal')
                 tile.lightRect.fill(tile.light);
+
+            tile.mvImage = new K.Image({x:px, y:py});
+            tileMovementLayer.add(tile.mvImage);
+            if (tile.movement && tile.movement != 'normal')
+                tile.mvImage.image(C.imageCache[tile.movement].image);
         }
     }
 
@@ -370,6 +380,14 @@ function PaintTile()
     {
         tile.lightRect.fill(tool.propValue);
         tile.light = tool.propValue;
+    }
+    else if (tool.propName == 'movement')
+    {
+        tile.movement = tool.propValue;
+        if (tool.propValue == 'normal')
+            tile.mvImage.image(null);
+        else
+            tile.mvImage.image(C.imageCache[tool.propValue].image);
     }
 }
 
