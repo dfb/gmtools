@@ -15,16 +15,18 @@ let curIndex = 0;
 let cur = C.UNITS[0];
 let ac = cur.ac;
 let health = cur.health;
+let movement = cur.movement || 0;
 function OnSelected()
 {
     cur = C.UNITS[curIndex];
     ac = cur.ac;
     health = cur.health;
+    movement = cur.movement || 0;
 }
 
 function Add()
 {
-    unit = {name:cur.name, ac, health, imageName:cur.imageName};
+    unit = {name:cur.name, ac, health, imageName:cur.imageName, movement};
     CloseModal(MODAL_OK);
 }
 
@@ -40,10 +42,13 @@ function Add()
             </option>
         {/each}
         </select>
-        <img src={C.imageCache[cur.imageName].url}/>
+        <imageHolder>
+            <img src={C.imageCache[cur.imageName].url}/>
+        </imageHolder>
         <p>
             AC: <input type="text" bind:value={ac} />
             Health: <input type="text" bind:value={health} />
+            Movement: <input type="text" bind:value={movement} />
         </p>
     </content>
     <div class="buttons">
@@ -52,5 +57,11 @@ function Add()
     </div>
 </Modal>
 
-
+<style>
+imageHolder
+{
+    display:inline-block;
+    background-color:black;
+}
+</style>
 

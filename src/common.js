@@ -1,15 +1,15 @@
 export const UNITS = [ // available units that you can spawn - TODO: these should later come from some external source instead of being hardcoded
     // note that imageName should correspond to an imageCache key
-    {name:'Archer', imageName:'unitArcher', ac:3, health:5},
-    {name:'Archer Captain', imageName:'unitCapArcher', ac:4, health:8},
-    {name:'Catapult', imageName:'unitCatapult', ac:2, health:10},
-    {name:'Cavalry', imageName:'unitCavalry', ac:6, health:8},
-    {name:'Cavalry Captain', imageName:'unitCapCavalry', ac:7, health:9},
-    {name:'Spearman', imageName:'unitSpearman', ac:8, health:8},
-    {name:'Spearman Captain', imageName:'unitCapSpearman', ac:8, health:10},
-    {name:'Player - Melee', imageName:'unitPlayerMelee', ac:0, health:5},
-    {name:'Player - Ranged', imageName:'unitPlayerRanged', ac:0, health:5},
-    {name:'Player - Airborn', imageName:'unitPlayerAirborn', ac:0, health:5},
+    {name:'Archer', imageName:'unitArcher', ac:3, health:5, movement:2},
+    {name:'Archer Captain', imageName:'unitCapArcher', ac:4, health:8, movement:2},
+    {name:'Catapult', imageName:'unitCatapult', ac:2, health:10, movement:1},
+    {name:'Cavalry', imageName:'unitCavalry', ac:6, health:8, movement:4},
+    {name:'Cavalry Captain', imageName:'unitCapCavalry', ac:7, health:9, movement:4},
+    {name:'Spearman', imageName:'unitSpearman', ac:8, health:8, movement:2},
+    {name:'Spearman Captain', imageName:'unitCapSpearman', ac:8, health:10, movement:2},
+    {name:'Player - Melee', imageName:'unitPlayerMelee', ac:0, health:5, movement:2},
+    {name:'Player - Ranged', imageName:'unitPlayerRanged', ac:0, health:5, movement:2},
+    {name:'Player - Airborn', imageName:'unitPlayerAirborn', ac:0, health:5, movement:4},
 ];
 
 // called on startup to create Image objects for any assets we'll reuse. TODO: add this to one image and load as an image atlas

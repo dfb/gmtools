@@ -152,6 +152,10 @@ function InitBoard(b)
             tileMovementLayer.add(tile.mvImage);
             if (tile.movement && tile.movement != 'normal')
                 tile.mvImage.image(C.imageCache[tile.movement].image);
+
+            // fix up some attrs that were added later
+            for (let u of tile.units)
+                u.movement = u.movement || 0;
         }
     }
 
@@ -445,6 +449,21 @@ function RemoveUnit(i)
     DrawUnits();
 }
 
+// modifies some attribute of a unit
+function UpdateUnit(unit, {ac, health, movement})
+{
+    if (ac != null) unit.ac = ac;
+    if (health != null) unit.health = health;
+    if (movement != null) unit.movement = movement;
+    DB.SaveBoard(board);
+    curTilePos = curTilePos; // trigger a re-render
+}
+
+function SaveBoard()
+{
+    DB.SaveBoard(board);
+}
+
 </script>
 
 <svelte:window on:resize={OnWindowResize}/>
@@ -467,9 +486,8 @@ function RemoveUnit(i)
             </boardInfo>
             <tileInfo>
                 {#if curTilePos}
-                    <p>Tile: {curTilePos[0]}, {curTilePos[1]}</p>
-                    <p>Type: {curTile.type}</p>
-                    <p>Lighting: {curTile.light}</p>
+                    <p>Tile: {curTilePos[0]}, {curTilePos[1]}, type: {curTile.type}</p>
+                    <p>Lighting: {curTile.light}, movement: {curTile.movement}</p>
 
                     <p>Units on this tile:</p>
                     <ul>
@@ -477,17 +495,11 @@ function RemoveUnit(i)
                         <li>
                             <button title="Delete this unit" on:click={()=>RemoveUnit(i)}>X</button>
                             <img src={C.imageCache[unit.imageName].url}/>
-                            {unit.name} (AC: {unit.ac}
+                            {unit.name}
 
-                            <button on:click={()=> unit.ac= Math.max(0, unit.ac-1)}>-</button>
-                            <input style="width:20px" bind:value={unit.ac}/>
-                            <button on:click={()=> unit.ac++}>+</button>
-
-                            HP:
-                            <button on:click={()=> unit.health = Math.max(0, unit.health-1)}>-</button>
-                            <input style="width:20px" bind:value={unit.health}/>
-                            <button on:click={()=> unit.health++}>+</button>
-                            )
+                            AC: <input style="width:30px" on:change={SaveBoard} bind:value={unit.ac} type="number"/>
+                            HP: <input style="width:30px" on:change={SaveBoard} bind:value={unit.health} type="number"/>
+                            Move: <input style="width:30px" on:change={SaveBoard} bind:value={unit.movement} type="number"/>
                         </li>
                     {/each}
                     </ul>
