@@ -234,6 +234,23 @@ function DrawUnits()
     }
 }
 
+// makes the tile at the given position the current tile
+let curUnitIndex = -1; // currently selected index on the current tile, if any
+let curTilePos = null; // [tileX, tileY] of currently selected tile or null
+function SelectTileAt(x, y)
+{
+    curUnitIndex = -1;
+    if (x == null)
+        curTilePos = null;
+    else
+        curTilePos = [x, y];
+}
+
+function RefreshTile()
+{
+    curTilePos = curTilePos;
+}
+
 // called when the user drops a dragged unit onto a tile
 function StopDragging(unit)
 {
@@ -259,7 +276,7 @@ function StopDragging(unit)
 
     // select the tile the unit was dropped on and force a re-render
     unit.pos = [newX, newY];
-    curTilePos = [newX, newY];
+    SelectTileAt(newX, newY);
     DrawUnits();
     DrawGrid(); // to reflect that a new tile has been selected
     DB.SaveBoard(board);
@@ -293,7 +310,6 @@ function OnMouseWheel(e)
 let panStartOffset=null; // for moving around the view of the board
 let paintingTiles = false;
 let tilesPainted = 0; // during a drag, how many tiles were modified
-let curTilePos = null; // [tileX, tileY] of currently selected tile or null
 $:curTile = board != null && curTilePos != null ? board.tiles[curTilePos[0]][curTilePos[1]] : null;
 
 function OnMouseDown(e)
@@ -311,9 +327,9 @@ function OnMouseDown(e)
         {   // select this tile
             let [x,y] = TilePosUnderCursor();
             if (x == -1)
-                curTilePos = null;
+                SelectTileAt(null);
             else
-                curTilePos = [x,y];
+                SelectTileAt(x,y);
             DrawGrid();
         }
     }
@@ -425,7 +441,7 @@ function StartAddingUnit()
         let unit = {id:C.GetUnitID(), ...comp.unit};
         unit.pos = curTilePos;
         curTile.units.push(unit);
-        curTilePos = curTilePos; // trigger a re-render
+        RefreshTile();
         DrawUnits();
         DB.SaveBoard(board);
     });
@@ -445,7 +461,7 @@ function OpenResizeModal()
 function RemoveUnit(i)
 {
     curTile.units.splice(i, 1);
-    curTilePos = curTilePos; // trigger a re-render
+    RefreshTile();
     DrawUnits();
 }
 
@@ -456,7 +472,7 @@ function UpdateUnit(unit, {ac, health, movement})
     if (health != null) unit.health = health;
     if (movement != null) unit.movement = movement;
     DB.SaveBoard(board);
-    curTilePos = curTilePos; // trigger a re-render
+    RefreshTile();
 }
 
 function SaveBoard()
@@ -490,19 +506,24 @@ function SaveBoard()
                     <p>Lighting: {curTile.light}, movement: {curTile.movement}</p>
 
                     <p>Units on this tile:</p>
-                    <ul>
+                    <units>
                     {#each curTile.units as unit,i}
-                        <li>
-                            <button title="Delete this unit" on:click={()=>RemoveUnit(i)}>X</button>
-                            <img src={C.imageCache[unit.imageName].url}/>
-                            {unit.name}
+                        <unit class:selected={curUnitIndex==i} on:click={()=>curUnitIndex=i}>
+                            {#if curUnitIndex == i} <!-- when selected, show more details -->
+                                <button title="Delete this unit" on:click={()=>RemoveUnit(i)}>X</button>
+                                <img src={C.imageCache[unit.imageName].url}/>
+                                {unit.name}
 
-                            AC: <input style="width:30px" on:change={SaveBoard} bind:value={unit.ac} type="number"/>
-                            HP: <input style="width:30px" on:change={SaveBoard} bind:value={unit.health} type="number"/>
-                            Move: <input style="width:30px" on:change={SaveBoard} bind:value={unit.movement} type="number"/>
-                        </li>
+                                AC: <input style="width:30px" on:change={SaveBoard} bind:value={unit.ac} type="number"/>
+                                HP: <input style="width:30px" on:change={SaveBoard} bind:value={unit.health} type="number"/>
+                                Move: <input style="width:30px" on:change={SaveBoard} bind:value={unit.movement} type="number"/>
+                            {:else}
+                                <img src={C.imageCache[unit.imageName].url}/> {unit.name}
+                                AC:{unit.ac} HP:{unit.health}Move: {unit.movement}
+                            {/if}
+                        </unit>
                     {/each}
-                    </ul>
+                    </units>
                     <button on:click={StartAddingUnit} disabled={curTile.units.length>3}>Add unit</button>
                 {/if}
             </tileInfo>
@@ -578,6 +599,19 @@ screen {
 
             tileInfo > ul {
                 padding:0;
+            }
+
+            units {
+            }
+
+            unit {
+                padding:5px;
+                display: block;
+                cursor:pointer;
+            }
+
+            unit.selected {
+                background-color: #00000040;
             }
 
             appButtons {
