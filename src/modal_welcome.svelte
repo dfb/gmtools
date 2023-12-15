@@ -9,7 +9,7 @@ export let board = null; // the board to use - either the one the user selected 
 
 let boards = [];
 let newW=10, newH=10, newName='';
-$:createReady = newW > 0 && newW < 50 && newH > 0 && newH < 50 && newName.length > 0 && newName.length < 100;
+$:createReady = newW > 0 && newW <= 100 && newH > 0 && newH <= 100 && newName.length > 0 && newName.length < 100;
 
 function RefreshBoardList()
 {
